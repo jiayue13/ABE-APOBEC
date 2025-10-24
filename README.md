@@ -1,15 +1,35 @@
-# ABE-APOBEC
-The progress of RBP and Base editor
+# ABE-APOBEC: RBP and Base Editor Analysis Pipeline
 
+This repository supports the analysis of RNA-binding protein (RBP) effects on Base Editor activity.  
+The `bactools` module processes strand-specific VCF files generated from RNA-seq or targeted sequencing data to quantify editing frequencies across samples.
 
-## bactools Vcf files progress
-Run vcf_process.py on wsl or windows to process vcf files.
-It need four parameters:
-   s, # strand: 1=FWD/neg, 2=REV/pos
-   input, # Input VCF directory (including ProQ-rABE_FWD/REV.vcf[.gz])
-   output, # Output Directory
-   samples # Optional: list of sample names; if not provided, they will be automatically inferred from the VCF header
- python vcf_process.py [S] \
-   --input \
-   --output
+---
+## ✨ Quality Control
+## ✒ bowtie2 alignment
+## 🧬 bcftools mpileup
+## 🧪 `vcf_process.py`: VCF Processing Tool
+
+Processes strand-separated VCF files (e.g., from `mpileup` + strand filtering) into a unified, sample-annotated tabular format for downstream analysis.
+
+### 📥 Input
+- VCF files (optionally gzipped) named like:
+  - `RBP_1_Aligned.out.FWD.vcf`
+  - `WT_2_Aligned.out.REV.vcf.gz`
+- Files should reside in a single input directory.
+- Sample names are auto-detected from VCF headers unless explicitly provided.
+
+### 📤 Output
+- A single vcf file (tab-separated) with columns:
+  - Genomic coordinates (`CHROM`, `POS`, `REF`, `ALT`)
+  - Strand-specific editing counts per sample
+
+---
+
+## ▶️ Usage
+
+```bash or powershell
+python vcf_process.py [STRAND] \
+  --input <INPUT_VCF_DIR> \
+  --output <OUTPUT_DIR> \
+  [--samples SAMPLE1 SAMPLE2 ...]
  
