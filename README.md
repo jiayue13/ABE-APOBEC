@@ -7,8 +7,7 @@ The `bactools` module processes strand-specific VCF files generated from RNA-seq
 ## ✨ Quality Control
 ## ✒ bowtie2 alignment
 ## 🧬 bcftools mpileup
-## 🧪 `vcf_process.py`: VCF Processing Tool
-## 🧪 `vcf_process.R`: VCF Processing Tool
+## 🧪 `vcf_process.py`, `vcf_process.R`: VCF Processing Tool
 
 Processes strand-separated VCF files (e.g., from `mpileup` + strand filtering) into a unified, sample-annotated tabular format for downstream analysis.
 
