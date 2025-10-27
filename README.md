@@ -32,6 +32,7 @@ python vcf_process.py [STRAND] \
   --input <INPUT_VCF_DIR> \
   --output <OUTPUT_DIR> \
   [--samples SAMPLE1 SAMPLE2 ...]
+
 Rscript vcf_process.R [STRAND] \
   --input <INPUT_VCF_DIR> \
   --output <OUTPUT_DIR> \
