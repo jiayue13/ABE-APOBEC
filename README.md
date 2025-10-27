@@ -9,7 +9,7 @@ The `bcftools` module processes **strand-specific VCF files** generated from **R
   - `fastp version 0.23.4`
 - Run `run_fastp.sh` to perform **quality control**.
 ---
-## ✒ bowtie2 alignment
+## ✒ Bowtie2 alignment
 - I put all fastq files in a Folder. First make **genome index** and **genome bed**.
   - `samtools version 1.19.2`
   - `bowtie2 version 2.5.4`
@@ -24,7 +24,7 @@ gff2bed < kp.gff > kp.bed
 ```
 - Run `run_bowtie2.sh` to align **fastq and split chains**.
 ---
-## 🧬 bcftools mpileup
+## 🧬 Bcftools mpileup
 - **Set workdir and bash**
   - `bcftools 1.19`
   - `Using htslib 1.19`
