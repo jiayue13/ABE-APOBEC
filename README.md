@@ -1,10 +1,30 @@
 # ABE-APOBEC: RBP and Base Editor Analysis Pipeline
 
 This repository supports the analysis of RNA-binding protein (RBP) effects on Base Editor activity.  
-The `bactools` module processes strand-specific VCF files generated from RNA-seq or targeted sequencing data to quantify editing frequencies across samples.
+The `bcftools` module processes strand-specific VCF files generated from RNA-seq or targeted sequencing data to quantify editing frequencies across samples.
 
 ---
 ## ✨ Quality Control
+- Use `fastp` to perform quality control on original fastq.
+  - `fastp version 0.23.4`
+```
+#!/usr/bin/env bash
+set -euo pipefail
+shopt -s nullglob
+
+indir=/mnt/e/Kpn_data/seq_data/ProQ-ABE-fastq
+# sample list
+SAMPLES=("ProQ_1" "ProQ_2" "ProQ_3" "WT_1" "WT_2" "WT_3")
+
+# Fastp Quality Control
+for SAMPLE in "${SAMPLES[@]}"; do
+    echo "🧼 Running fastp for $SAMPLE..."
+    fastp -i $indir/${SAMPLE}_R1.fastq.gz -I $FASTQ_DIR/${SAMPLE}_R2.fastq.gz \
+          -o ${SAMPLE}.R1.raw.fastq.gz -O ${SAMPLE}.R1.raw.fastq.gz \
+          -h ${SAMPLE}_fastp.html -j ${SAMPLE}_fastp.json \
+          -q 20 -u 30 -n 5 -l 50
+done
+```
 
 ## ✒ bowtie2 alignment
 - I put all fastq files in a Folder. First make genome index and genome bed.
@@ -30,17 +50,6 @@ indexloc=~/reference/kpn/genome/bowtie2_index/kp
 
 mkdir -p "$outdir"
 #---------------------------------------------------------------#
-# sample list
-SAMPLES=("ProQ_1" "ProQ_2" "ProQ_3" "WT_1" "WT_2" "WT_3")
-
-# Step 1: fastp Quality Control
-for SAMPLE in "${SAMPLES[@]}"; do
-    echo "🧼 Running fastp for $SAMPLE..."
-    fastp -i $indir/${SAMPLE}_R1.fastq.gz -I $FASTQ_DIR/${SAMPLE}_R2.fastq.gz \
-          -o ${SAMPLE}.R1.raw.fastq.gz -O ${SAMPLE}.R1.raw.fastq.gz \
-          -h ${SAMPLE}_fastp.html -j ${SAMPLE}_fastp.json \
-          -q 20 -u 30 -n 5 -l 50
-done
 # Decompression: decompress only if .gz exists; skip if already decompressed
 gz_list=( "$indir"/*.fastq.gz )
 if [ ${#gz_list[@]} -gt 0 ]; then
