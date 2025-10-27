@@ -4,7 +4,7 @@ suppressPackageStartupMessages({
   library(tidyverse)   # dplyr / stringr / readr / tidyr
 })
 
-# ---------------- 参数解析（无需额外依赖） ----------------
+# ---------------- Parameter parsing (no additional dependencies required) ----------------
 parse_args <- function() {
   args <- commandArgs(trailingOnly = TRUE)
   get_val <- function(key, default = NULL) {
@@ -14,7 +14,7 @@ parse_args <- function() {
     if (length(hit) > 0 && length(args) >= hit + 1) return(args[hit + 1])
     default
   }
-  # s 既支持位置参数也支持 --s
+  # s Supports both positional parameters and --s
   s_val <- get_val("s", NA)
   if (is.na(s_val)) {
     if (length(args) >= 1 && !startsWith(args[1], "--")) s_val <- args[1]
@@ -23,11 +23,11 @@ parse_args <- function() {
     s        = suppressWarnings(as.integer(ifelse(is.na(s_val), 1L, s_val))),
     input  = get_val("input", "."),
     output   = get_val("output",  "."),
-    samples  = get_val("samples", NULL)  # 逗号分隔，可选
+    samples  = get_val("samples", NULL)  # Optional
   )
 }
 
-# ---------------- 读取 VCF 表头 (#CHROM) ----------------
+# ---------------- read VCF header (#CHROM) ----------------
 read_vcf_header <- function(path) {
   con <- if (grepl("\\.gz$", path, ignore.case = TRUE)) gzfile(path, "rt") else file(path, "rt")
   on.exit(close(con), add = TRUE)
@@ -43,22 +43,22 @@ read_vcf_header <- function(path) {
   header
 }
 
-# ---------------- 样本名清洗 ----------------
+# ---------------- Sample name cleaning ----------------
 sanitize_sample <- function(x) {
   b <- basename(x)
-  # 去掉路径后缀部分
+  # Remove the path suffix
   b <- sub("\\.(bam|cram)$", "", b, ignore.case = TRUE)
   b <- sub("\\.(FWD|REV)$", "", b, ignore.case = TRUE)
-  # 清除多余符号
+  # Clear redundant symbols
   b <- gsub("[^[:alnum:]_.-]+", "_", b)
   b <- gsub("_+", "_", b)
   b
 }
 
-# ---------------- 主流程 ----------------
+# ---------------- Main process ----------------
 main <- function() {
   a <- parse_args()
-  if (!(a$s %in% c(1L, 2L))) stop("参数 s 只能是 1 或 2（1=FWD/neg, 2=REV/pos）。")
+  if (!(a$s %in% c(1L, 2L))) stop("Parameter s can only be 1 or 2 (1=FWD/neg, 2=REV/pos).")
 
   st     <- if (a$s == 1L) "FWD" else "REV"
   strand <- if (a$s == 1L) "neg" else "pos"
@@ -69,16 +69,16 @@ main <- function() {
 
   vcf_path <- file.path(input, sprintf("ProQ-rABE_%s.vcf", st))
   if (!file.exists(vcf_path) && file.exists(paste0(vcf_path, ".gz"))) vcf_path <- paste0(vcf_path, ".gz")
-  if (!file.exists(vcf_path)) stop("未找到输入：", vcf_path, " 或其 .gz 版本")
+  if (!file.exists(vcf_path)) stop("Input not found:", vcf_path, " or its .gz version")
 
-  message("[INFO] 读取文件: ", vcf_path)
+  message("[INFO] read files:", vcf_path)
 
   header <- read_vcf_header(vcf_path)
-  if (is.null(header)) stop("未在 VCF 中找到 #CHROM 表头行。")
+  if (is.null(header)) stop("No #CHROM header row found in VCF.")
   sample_cols <- header[10:length(header)]
-  if (length(sample_cols) == 0) stop("VCF 中未检测到样本列。")
+  if (length(sample_cols) == 0) stop("Sample column not detected in VCF.")
 
-  # 读取数据（跳过 # 行），全部按字符读入
+  # Read data (skip # lines), read all characters
   df <- readr::read_tsv(
     vcf_path,
     comment   = "#",
@@ -87,7 +87,7 @@ main <- function() {
     progress  = FALSE
   )
 
-  # 新增 strand；ALT 仅保留首个碱基；去除核心缺失
+  # Add new strand; retain only the first base of ALT; remove core deletions
   df <- df %>%
     mutate(
       strand = strand,
@@ -95,7 +95,7 @@ main <- function() {
     ) %>%
     drop_na(CHROM, POS, REF, ALT)
 
-  # RNAREF / RNAALT（负链互补）—— 使用“向量安全”的方式
+  # RNAREF / RNAALT (minus strand complementation)
   comp <- c(A = "T", T = "A", C = "G", G = "C")
   df <- df %>%
     mutate(
@@ -103,18 +103,17 @@ main <- function() {
       RNAALT = ALT
     )
   if (strand == "neg") {
-    # 先映射，返回可能带 NA 的向量；再用 ifelse 替换 NA 为原值（向量安全）
     rnaref_map <- unname(comp[df$RNAREF])
     rnaalt_map <- unname(comp[df$RNAALT])
     df$RNAREF  <- ifelse(is.na(rnaref_map), df$RNAREF, rnaref_map)
     df$RNAALT  <- ifelse(is.na(rnaalt_map), df$RNAALT, rnaalt_map)
   }
 
-  # 样本名（优先 --samples；否则从 VCF 表头推断并清洗）
+  # Sample name (prefers --samples; otherwise inferred from VCF header and cleaned)
   if (!is.null(a$samples) && nchar(a$samples) > 0) {
     user_samples <- strsplit(a$samples, ",", fixed = TRUE)[[1]] %>% trimws()
     if (length(user_samples) != length(sample_cols)) {
-      warning("--samples 数量与 VCF 样本列不一致，将使用 VCF 表头推断。")
+      warning("If the number of --samples does not match the VCF sample column, it will be inferred from the VCF header.")
       sList <- sanitize_sample(sample_cols)
     } else {
       sList <- user_samples
@@ -123,11 +122,11 @@ main <- function() {
     sList <- sanitize_sample(sample_cols)
   }
 
-  message("[INFO] 样本列（VCF头）：", paste(sample_cols, collapse = ", "))
-  message("[INFO] 样本名（列前缀）：", paste(sList, collapse = ", "))
+  message("[INFO] Sample columns (VCF header): ", paste(sample_cols, collapse = ", "))
+  message("[INFO] Sample name (column prefix): ", paste(sList, collapse = ", "))
 
-  # ------- 固定位置解析：DP=第二段, AD=第六段；AD 取逗号第二项（alt） -------
-  # 向量安全：使用 str_split_fixed 取到第 6 段，再用 strsplit() 提取“第二个逗号段”
+# ------- Fixed-position parsing: DP = second paragraph, AD = sixth paragraph; AD takes the second comma (alt) -------
+# Vector-safe: Use str_split_fixed to get the sixth paragraph, then use strsplit() to extract the "second comma paragraph"
   for (k in seq_along(sample_cols)) {
     col <- sample_cols[k]
     sp  <- sList[k]
@@ -152,31 +151,32 @@ main <- function() {
     df[[paste0(sp, ".ratio")]] <- ratio
   }
 
-  # 平均覆盖
+  # Average coverage
   dp_cols   <- paste0(sList, ".DP")
   df$avgDP  <- rowMeans(as.matrix(df[dp_cols]), na.rm = TRUE)
 
-  # 输出
+  # Output
   out_path <- file.path(output, sprintf("mpileup_fixstrand_%s.vcf", strand))
-  message("[INFO] 输出路径: ", out_path)
+  message("[INFO] output: ", out_path)
 
   ok <- tryCatch({
     write.table(df, file = out_path, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
     TRUE
   }, error = function(e) {
-    message("[WARN] 直接写出失败：", conditionMessage(e))
+    message("[WARN] Write failure directly: ", conditionMessage(e))
     FALSE
   })
 
   if (!ok) {
     tmp <- tempfile(fileext = ".vcf")
     write.table(df, file = tmp, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-    message("[HINT] 已写入临时文件：", tmp)
-    message("[HINT] 请手动复制到目标目录，例如：")
+    message("[HINT] Temporary file written：", tmp)
+    message("[HINT] Please copy it manually to the target directory, for example：")
     message("       cp ", shQuote(tmp), " ", shQuote(out_path))
   } else {
-    message("[OK] 完成：", out_path, "  （共 ", nrow(df), " 行）")
+    message("[OK] Finish：", out_path, "  （total ", nrow(df), " rows）")
   }
 }
 
 main()
+
