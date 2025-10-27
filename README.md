@@ -5,26 +5,9 @@ The `bcftools` module processes strand-specific VCF files generated from RNA-seq
 
 ---
 ## ✨ Quality Control
-- Use `fastp` to perform quality control on original fastq.
+- Use `fastp` to perform quality control on original fastq. 
   - `fastp version 0.23.4`
-```
-#!/usr/bin/env bash
-set -euo pipefail
-shopt -s nullglob
-
-indir=/mnt/e/Kpn_data/seq_data/ProQ-ABE-fastq
-# sample list
-SAMPLES=("ProQ_1" "ProQ_2" "ProQ_3" "WT_1" "WT_2" "WT_3")
-
-# Fastp Quality Control
-for SAMPLE in "${SAMPLES[@]}"; do
-    echo "🧼 Running fastp for $SAMPLE..."
-    fastp -i $indir/${SAMPLE}_R1.fastq.gz -I $FASTQ_DIR/${SAMPLE}_R2.fastq.gz \
-          -o ${SAMPLE}.R1.raw.fastq.gz -O ${SAMPLE}.R1.raw.fastq.gz \
-          -h ${SAMPLE}_fastp.html -j ${SAMPLE}_fastp.json \
-          -q 20 -u 30 -n 5 -l 50
-done
-```
+- Run `run_fastp.sh` to perform quality control.
 
 ## ✒ bowtie2 alignment
 - I put all fastq files in a Folder. First make genome index and genome bed.
@@ -39,42 +22,13 @@ bowtie2-build ~/reference/kpn/genome/kp.fa ~/reference/kpn/genome/bowtie2_index/
 # make genome bed
 gff2bed < kp.gff > kp.bed
 ```
-- Run run_bowtie2.sh to align fastq and split chains.
+- Run `run_bowtie2.sh` to align fastq and split chains.
 ## 🧬 bcftools mpileup
 - **Set workdir and bash**
   - `bcftools 1.19`
   - `Using htslib 1.19`
-```
-#!/usr/bin/env bash
-set -euo pipefail
-shopt -s nullglob
-
-res_dir="$HOME/myscratch/ProQ_STAR_results" # result dir
-genomeFa="$HOME/reference/kpn/genome/kp.fa" # genome index dir
-bed="$HOME/reference/kpn/genome/kp.bed" # genome bed dir (bedtools gtf2bed < genes.gtf > genes.bed)
-```
+- Run `run_bcftools.sh` to perform variants calling.
 - **mpileup + filter** (Keep threshold logic: **any sample with ALT depth > 2** and **any sample with DP > 20**)
-```
-bcftools mpileup -f "$genomeFa" -R "$bed" -d 10000000 -I -a DP,AD,ADF,ADR,SP,INFO/AD,INFO/ADF,INFO/ADR \
-    ${res_dir}/ProQ_1_Aligned.out.FWD.bam \
-    ${res_dir}/ProQ_2_Aligned.out.FWD.bam \
-    ${res_dir}/ProQ_3_Aligned.out.FWD.bam\
-    ${res_dir}/WT_1_Aligned.out.FWD.bam \
-    ${res_dir}/WT_2_Aligned.out.FWD.bam \
-    ${res_dir}/WT_3_Aligned.out.FWD.bam \
-    | bcftools filter -i 'INFO/AD[1-]>2 & MAX(FORMAT/DP)>20' -O v - > /mnt/e/Kpn_data/seq_data/20251028/results/ProQ-rABE_FWD.vcf
-
-bcftools mpileup -f "$genomeFa" -R "$bed" -d 10000000 -I -a DP,AD,ADF,ADR,SP,INFO/AD,INFO/ADF,INFO/ADR \
-    ${res_dir}/ProQ_1_Aligned.out.REV.bam \
-    ${res_dir}/ProQ_2_Aligned.out.REV.bam \
-    ${res_dir}/ProQ_3_Aligned.out.REV.bam\
-    ${res_dir}/WT_1_Aligned.out.REV.bam \
-    ${res_dir}/WT_2_Aligned.out.REV.bam \
-    ${res_dir}/WT_3_Aligned.out.REV.bam \
-    | bcftools filter -i 'INFO/AD[1-]>2 & MAX(FORMAT/DP)>20' -O v - > /mnt/e/Kpn_data/seq_data/20251028/results/ProQ-rABE_REV.vcf
-	
-echo "all samples REV finished!"
-```
 - The colnames of vcf files count on the bam you submitted.
 ## 🧪 `vcf_process.py`, `vcf_process.R`: VCF Processing Tool
 
