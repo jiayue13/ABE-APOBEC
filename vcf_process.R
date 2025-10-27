@@ -21,8 +21,8 @@ parse_args <- function() {
   }
   list(
     s        = suppressWarnings(as.integer(ifelse(is.na(s_val), 1L, s_val))),
-    workdir  = get_val("workdir", "."),
-    resdir   = get_val("resdir",  "."),
+    input  = get_val("input", "."),
+    output   = get_val("output",  "."),
     samples  = get_val("samples", NULL)  # 逗号分隔，可选
   )
 }
@@ -46,8 +46,12 @@ read_vcf_header <- function(path) {
 # ---------------- 样本名清洗 ----------------
 sanitize_sample <- function(x) {
   b <- basename(x)
+  # 去掉路径后缀部分
   b <- sub("\\.(bam|cram)$", "", b, ignore.case = TRUE)
+  b <- sub("\\.(FWD|REV)$", "", b, ignore.case = TRUE)
+  # 清除多余符号
   b <- gsub("[^[:alnum:]_.-]+", "_", b)
+  b <- gsub("_+", "_", b)
   b
 }
 
@@ -59,11 +63,11 @@ main <- function() {
   st     <- if (a$s == 1L) "FWD" else "REV"
   strand <- if (a$s == 1L) "neg" else "pos"
 
-  workdir <- a$workdir
-  resdir  <- a$resdir
-  if (!dir.exists(resdir)) dir.create(resdir, recursive = TRUE, showWarnings = FALSE)
+  input <- a$input
+  output  <- a$output
+  if (!dir.exists(output)) dir.create(output, recursive = TRUE, showWarnings = FALSE)
 
-  vcf_path <- file.path(workdir, sprintf("ProQ-rABE_%s.vcf", st))
+  vcf_path <- file.path(input, sprintf("ProQ-rABE_%s.vcf", st))
   if (!file.exists(vcf_path) && file.exists(paste0(vcf_path, ".gz"))) vcf_path <- paste0(vcf_path, ".gz")
   if (!file.exists(vcf_path)) stop("未找到输入：", vcf_path, " 或其 .gz 版本")
 
@@ -153,7 +157,7 @@ main <- function() {
   df$avgDP  <- rowMeans(as.matrix(df[dp_cols]), na.rm = TRUE)
 
   # 输出
-  out_path <- file.path(resdir, sprintf("mpileup_fixstrand_%s.vcf", strand))
+  out_path <- file.path(output, sprintf("mpileup_fixstrand_%s.vcf", strand))
   message("[INFO] 输出路径: ", out_path)
 
   ok <- tryCatch({
