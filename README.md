@@ -7,16 +7,18 @@ The `bactools` module processes strand-specific VCF files generated from RNA-seq
 ## ✨ Quality Control
 ## ✒ bowtie2 alignment
 ## 🧬 bcftools mpileup
+**Set workdir and bash**
 ```wsl (Ubuntu 24.04.1 LTS)
 #!/usr/bin/env bash
 set -euo pipefail
 shopt -s nullglob
 
-res_dir="$HOME/myscratch/ProQ_STAR_results"
-genomeFa="$HOME/reference/kpn/genome/kp.fa"
-bed="$HOME/reference/kpn/genome/kp.bed"
-
-# mpileup + 过滤（保持你原始阈值逻辑：任一样本 ALT 深度>2 且任一样本DP>20）
+res_dir="$HOME/myscratch/ProQ_STAR_results" # result dir
+genomeFa="$HOME/reference/kpn/genome/kp.fa" # genome index dir
+bed="$HOME/reference/kpn/genome/kp.bed" # genome bed dir (bedtools gtf2bed < genes.gtf > genes.bed)
+```
+**mpileup + filter** (Keep threshold logic: **any sample with ALT depth > 2** and **any sample with DP > 20**)
+```
 bcftools mpileup -f "$genomeFa" -R "$bed" -d 10000000 -I -a DP,AD,ADF,ADR,SP,INFO/AD,INFO/ADF,INFO/ADR \
     ${res_dir}/ProQ_1_Aligned.out.FWD.bam \
     ${res_dir}/ProQ_2_Aligned.out.FWD.bam \
@@ -36,7 +38,8 @@ bcftools mpileup -f "$genomeFa" -R "$bed" -d 10000000 -I -a DP,AD,ADF,ADR,SP,INF
     | bcftools filter -i 'INFO/AD[1-]>2 & MAX(FORMAT/DP)>20' -O v - > /mnt/e/Kpn_data/seq_data/20251028/results/ProQ-rABE_REV.vcf
 	
 echo "all samples REV finished!"
-
+```
+The colnames of vcf files count on the bam you submitted.
 ## 🧪 `vcf_process.py`, `vcf_process.R`: VCF Processing Tool
 
 Processes strand-separated VCF files (e.g., from `mpileup` + strand filtering) into a unified, sample-annotated tabular format for downstream analysis. (The results are same when you use R or python to process the VCF files.)
