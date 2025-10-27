@@ -7,7 +7,7 @@ The `bactools` module processes strand-specific VCF files generated from RNA-seq
 ## ✨ Quality Control
 
 ## ✒ bowtie2 alignment
-- I put all fastq files in a Folder.
+- I put all fastq files in a Folder. First make genome index and genome bed.
   - `samtools version 1.19.2`
   - `bowtie2 version 2.5.4`
   - `gff2bed version 2.4.42`
@@ -29,13 +29,33 @@ outdir=~/myscratch/ProQ_STAR_results
 indexloc=~/reference/kpn/genome/bowtie2_index/kp
 
 mkdir -p "$outdir"
+#---------------------------------------------------------------#
+# sample list
+SAMPLES=("ProQ_1" "ProQ_2" "ProQ_3" "WT_1" "WT_2" "WT_3")
 
-# unzip
-gunzip -dk ${indir}/*.fastq.gz
+# Step 1: fastp Quality Control
+for SAMPLE in "${SAMPLES[@]}"; do
+    echo "🧼 Running fastp for $SAMPLE..."
+    fastp -i $indir/${SAMPLE}_R1.fastq.gz -I $FASTQ_DIR/${SAMPLE}_R2.fastq.gz \
+          -o ${SAMPLE}.R1.raw.fastq.gz -O ${SAMPLE}.R1.raw.fastq.gz \
+          -h ${SAMPLE}_fastp.html -j ${SAMPLE}_fastp.json \
+          -q 20 -u 30 -n 5 -l 50
+done
+# Decompression: decompress only if .gz exists; skip if already decompressed
+gz_list=( "$indir"/*.fastq.gz )
+if [ ${#gz_list[@]} -gt 0 ]; then
+  echo "[INFO] Decompressing *.fastq.gz in $indir ..."
+  for f in "${gz_list[@]}"; do
+    gunzip "$f"
+  done
+else
+  echo "[INFO] No .fastq.gz files. Assuming FASTQ already uncompressed."
+fi
 
-for r1 in "$indir"/*.R1.raw.fastq.gz; do
-    sample=$(basename "$r1" .R1.raw.fastq.gz)
-    r2="${r1/.R1.raw.fastq.gz/.R2.raw.fastq.gz}"
+#---------------------------------------------------------------#
+for r1 in "$indir"/*.R1.raw.fastq; do
+    sample=$(basename "$r1" .R1.raw.fastq)
+    r2="$indir/${sample}.R2.raw.fastq"
     [[ -f "$r2" ]] || { echo "[WARN] Missing R2 for $sample"; continue; }
 
     echo "[INFO] Processing sample: $sample"
