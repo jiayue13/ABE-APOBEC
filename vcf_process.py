@@ -29,7 +29,7 @@ def normalize_path(p: Optional[str]) -> Optional[str]:
     if p is None:
         return p
     p = p.strip().strip('"').strip("'")
-    # Linux/WSL 下把 "E:\path" 或 "e:/path" 映射到 "/mnt/e/path"
+    # Map "E:\path" or "e:/path" to "/mnt/e/path" under Linux/WSL
     if platform.system() == "Linux":
         m = re.match(r'^([a-zA-Z]):[\\/](.*)$', p)
         if m:
@@ -210,6 +210,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
