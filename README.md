@@ -50,11 +50,13 @@ Processes strand-separated VCF files (e.g., from `mpileup` + strand filtering) i
 
 ### ▶️ Usage
 - strand **1** for **FWD/neg**; strand **2** for **REV/pos**.
+- input files: {basename}_{FWD/REV}.vcf
+- output files: mpileup_fixstrand_{basename}_{strand}.vcf
 ```bash or powershell
 python vcf_process.py [STRAND] \
   --input <INPUT_VCF_DIR> \
   --output <OUTPUT_DIR> \
-  [--samples SAMPLE1 SAMPLE2 ...]
+  --basename {basename}
 
 Rscript vcf_process.R [STRAND] \
   --input <INPUT_VCF_DIR> \
